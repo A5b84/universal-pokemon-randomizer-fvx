@@ -23,11 +23,14 @@ package com.uprfvx.random.customnames;
 /*----------------------------------------------------------------------------*/
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * A record for all lists of custom names; for trainers, trainer classes, and (gift/trade) Pokémon nicknames.
@@ -59,8 +62,22 @@ public record CustomNamesSet(List<String> trainerNames, List<String> trainerClas
     }
 
     private static List<String> readLines(String path) throws IOException {
-        return Files.readAllLines(Path.of(path), StandardCharsets.UTF_8).stream()
+        return streamLines(path)
                 .map(String::trim).map(String::strip).toList();
+    }
+
+    private static Stream<String> streamLines(String path) throws IOException {
+        try {
+            return Files.lines(Path.of(path), StandardCharsets.UTF_8);
+        } catch (NoSuchFileException e) {
+            try (InputStream input = CustomNamesSet.class.getClassLoader().getResourceAsStream(path)) {
+                if (input == null) {
+                    throw e;
+                }
+
+                return new String(input.readAllBytes(), StandardCharsets.UTF_8).lines();
+            }
+        }
     }
 
     public static void writeNamesToFile(CustomNamesSet customNamesSet) throws IOException {
