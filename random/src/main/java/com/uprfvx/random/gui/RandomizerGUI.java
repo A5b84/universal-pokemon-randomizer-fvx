@@ -27,6 +27,7 @@ import com.uprfvx.random.cli.CliRandomizer;
 import com.uprfvx.random.customnames.CustomNamesSet;
 import com.uprfvx.random.customnames.OldCustomNamesImporter;
 import com.uprfvx.random.exceptions.RandomizationException;
+import com.uprfvx.random.log.RandomizationDataDto;
 import com.uprfvx.random.random.SeedPicker;
 import com.uprfvx.random.updaters.TypeEffectivenessUpdater;
 import com.uprfvx.romio.MiscTweak;
@@ -40,6 +41,7 @@ import com.uprfvx.romio.romhandlers.*;
 import com.uprfvx.romio.romio.ROMFilter;
 import com.uprfvx.romio.romio.RomOpener;
 import filefunctions.FileNameFunctions;
+import tools.jackson.databind.ObjectMapper;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -52,6 +54,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
@@ -1311,7 +1314,7 @@ public class RandomizerGUI {
                         true, settings.toString(), Long.toString(seed));
             }
             SwingUtilities.invokeLater(() -> finishRandomization(
-                    filename, seed, cpg, baos, results.getCheckValue(), raceMode, batchRandomization
+                    filename, seed, cpg, baos, results.getCheckValue(), raceMode, batchRandomization, settings
             ));
         } else {
             Exception e = results.getException();
@@ -1338,14 +1341,16 @@ public class RandomizerGUI {
                                      CustomPlayerGraphics cpg,
                                      ByteArrayOutputStream baos,
                                      int checkValue,
-                                     boolean raceMode, boolean batchRandomization) {
+                                     boolean raceMode,
+                                     boolean batchRandomization,
+                                     Settings settings) {
         if (cpg != null) {
             recordCPGAsLastUsed(cpg);
         }
 
         opDialog.setVisible(false);
 
-        showSaveLogDialog(filename, baos, checkValue, raceMode, batchRandomization);
+        showSaveLogDialog(filename, baos, checkValue, raceMode, batchRandomization, settings);
 
         if (presetMode) {
             JOptionPane.showMessageDialog(frame,
@@ -1370,14 +1375,16 @@ public class RandomizerGUI {
 
     private void showSaveLogDialog(String filename, ByteArrayOutputStream baos,
                                    int checkValue,
-                                   boolean raceMode, boolean batchRandomization) {
+                                   boolean raceMode,
+                                   boolean batchRandomization,
+                                   Settings settings) {
         byte[] out = baos.toByteArray();
         if (raceMode) {
             JOptionPane.showMessageDialog(frame,
                     String.format(bundle.getString("GUI.raceModeCheckValuePopup"), checkValue));
         } else if (batchRandomization && batchRandomizationSettings.shouldGenerateLogFile()) {
             try {
-                saveLogFile(filename, batchRandomizationSettings.getLogFileEnding(), out);
+                saveRandomizationInfoFiles(filename, batchRandomizationSettings.getLogFileEnding(), out, settings);
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(frame,
                         bundle.getString("GUI.logSaveFailed"));
@@ -1389,7 +1396,7 @@ public class RandomizerGUI {
                     JOptionPane.YES_NO_OPTION);
             if (response == JOptionPane.YES_OPTION) {
                 try {
-                    saveLogFile(filename, "log", out);
+                    saveRandomizationInfoFiles(filename, "log", out, settings);
                 } catch (IOException e) {
                     JOptionPane.showMessageDialog(frame,
                             bundle.getString("GUI.logSaveFailed"));
@@ -1406,6 +1413,11 @@ public class RandomizerGUI {
         attemptWriteConfig();
     }
 
+    private void saveRandomizationInfoFiles(String filename, String logFileExtension, byte[] logs, Settings settings) throws IOException {
+        saveLogFile(filename, logFileExtension, logs);
+        saveRandomizationData(filename, settings);
+    }
+
     private void saveLogFile(String filename, String fileEnding, byte[] out) throws IOException {
         FileOutputStream fos = new FileOutputStream(filename + "." + fileEnding);
         fos.write(0xEF);
@@ -1413,6 +1425,11 @@ public class RandomizerGUI {
         fos.write(0xBF);
         fos.write(out);
         fos.close();
+    }
+
+    private void saveRandomizationData(String filename, Settings settings) {
+        RandomizationDataDto dto = RandomizationDataDto.from(romHandler, settings);
+        new ObjectMapper().writeValue(Path.of(filename + ".json"), dto);
     }
 
     private void presetLoader() {

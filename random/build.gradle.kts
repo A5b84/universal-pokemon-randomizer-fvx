@@ -25,6 +25,7 @@ dependencies {
 
     // Other dependencies
     implementation("com.formdev:flatlaf:3.7")
+    implementation("tools.jackson.core:jackson-databind:3.2.4")
 }
 
 tasks.jar {
@@ -39,6 +40,8 @@ tasks.jar {
         configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
     ) {
         exclude("META-INF/LICENSE")
+        exclude("META-INF/NOTICE")
+        exclude("module-info.class")
     }
 }
 

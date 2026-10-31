@@ -4,6 +4,7 @@ import com.uprfvx.random.GameRandomizer;
 import com.uprfvx.random.Settings;
 import com.uprfvx.random.customnames.CustomNamesSet;
 import com.uprfvx.random.gui.CPGSelection;
+import com.uprfvx.random.log.RandomizationDataDto;
 import com.uprfvx.romio.gamedata.PlayerCharacterType;
 import com.uprfvx.romio.graphics.packs.CustomPlayerGraphics;
 import com.uprfvx.romio.graphics.packs.GraphicsPack;
@@ -12,8 +13,10 @@ import com.uprfvx.romio.romhandlers.AbstractDSRomHandler;
 import com.uprfvx.romio.romhandlers.RomHandler;
 import com.uprfvx.romio.romio.RomOpener;
 import filefunctions.FileNameFunctions;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -97,6 +100,9 @@ public class CliRandomizer {
                     } catch (IOException e) {
                         printWarning("Could not write log.");
                     }
+
+                    RandomizationDataDto dto = RandomizationDataDto.from(romHandler, settings);
+                    new ObjectMapper().writeValue(Path.of(filename + ".json"), dto);
                 }
                 System.out.println("Randomized successfully!");
                 // this is the only successful exit, everything else will return false at the end of the function
