@@ -3,6 +3,8 @@
 This is a fork of [Universal Pokemon Randomizer FVX](https://github.com/upr-fvx/universal-pokemon-randomizer-fvx), a tool to randomize Pokémon roms, with the following changes:
 
 - When saving logs after randomization, a JSON file containing randomization data (similar to what's in logs) is also saved.
+- When randomizing held items, certain items can be configured to always be available through wild Pokémon encounters.
+  These items are listed in [EncounterHeldItemRandomizer](random/src/main/java/com/uprfvx/random/randomizers/EncounterHeldItemRandomizer.java).
 
 See the [Universal Pokemon Randomizer FVX website](https://upr-fvx.github.io/universal-pokemon-randomizer-fvx/) and the upstream repo for more information.
 
