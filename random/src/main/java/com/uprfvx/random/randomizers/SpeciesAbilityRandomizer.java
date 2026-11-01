@@ -1,18 +1,22 @@
 package com.uprfvx.random.randomizers;
 
+import com.uprfvx.random.SetUnion;
 import com.uprfvx.random.Settings;
 import com.uprfvx.romio.constants.AbilityIDs;
 import com.uprfvx.romio.constants.Gen3Constants;
 import com.uprfvx.romio.constants.GlobalConstants;
-import com.uprfvx.romio.gamedata.cueh.AltFormeAction;
+import com.uprfvx.romio.gamedata.Species;
+import com.uprfvx.romio.gamedata.Type;
 import com.uprfvx.romio.gamedata.cueh.BasicSpeciesAction;
 import com.uprfvx.romio.gamedata.cueh.CopyUpEvolutionsHelper;
 import com.uprfvx.romio.gamedata.cueh.EvolvedSpeciesAction;
 import com.uprfvx.romio.romhandlers.RomHandler;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 public class SpeciesAbilityRandomizer extends Randomizer {
 
@@ -38,7 +42,7 @@ public class SpeciesAbilityRandomizer extends Randomizer {
 
         final boolean hasHiddenAbilities = (romHandler.abilitiesPerSpecies() == 3);
 
-        final List<Integer> bannedAbilities = romHandler.getUselessAbilities();
+        final Set<Integer> bannedAbilities = new HashSet<>(romHandler.getUselessAbilities());
 
         if (!allowWonderGuard) {
             bannedAbilities.add(AbilityIDs.wonderGuard);
@@ -73,14 +77,18 @@ public class SpeciesAbilityRandomizer extends Randomizer {
         BasicSpeciesAction basicAction = pk -> {
             if (pk.getAbility1() != AbilityIDs.wonderGuard && pk.getAbility2() != AbilityIDs.wonderGuard
                     && pk.getAbility3() != AbilityIDs.wonderGuard) {
+                Set<Integer> speciesSpecificBannedAbilities = banNegativeAbilities ? getSpeciesSpecificNegativeAbilities(pk) : new HashSet<>();
+                Set<Integer> allAbilitiesBannedForSpecies = new SetUnion<>(bannedAbilities, speciesSpecificBannedAbilities);
+
                 // Pick first ability
-                pk.setAbility1(pickRandomAbility(maxAbility, bannedAbilities, weighDuplicatesTogether));
+                pk.setAbility1(pickRandomAbility(maxAbility, allAbilitiesBannedForSpecies, weighDuplicatesTogether));
+                speciesSpecificBannedAbilities.add(pk.getAbility1());
 
                 // Second ability?
                 if (ensureTwoAbilities || random.nextDouble() < 0.5) {
                     // Yes, second ability
-                    pk.setAbility2(pickRandomAbility(maxAbility, bannedAbilities, weighDuplicatesTogether,
-                            pk.getAbility1()));
+                    pk.setAbility2(pickRandomAbility(maxAbility, allAbilitiesBannedForSpecies, weighDuplicatesTogether));
+                    speciesSpecificBannedAbilities.add(pk.getAbility2());
                 } else {
                     // Nope
                     pk.setAbility2(0);
@@ -88,8 +96,7 @@ public class SpeciesAbilityRandomizer extends Randomizer {
 
                 // Third ability?
                 if (hasHiddenAbilities) {
-                    pk.setAbility3(pickRandomAbility(maxAbility, bannedAbilities, weighDuplicatesTogether,
-                            pk.getAbility1(), pk.getAbility2()));
+                    pk.setAbility3(pickRandomAbility(maxAbility, allAbilitiesBannedForSpecies, weighDuplicatesTogether));
                 }
             }
         };
@@ -112,10 +119,10 @@ public class SpeciesAbilityRandomizer extends Randomizer {
         changesMade = true;
     }
 
-    private int pickRandomAbilityVariation(int selectedAbility, int... alreadySetAbilities) {
+    private int pickRandomAbilityVariation(int selectedAbility, Set<Integer> bannedAbilities) {
         int newAbility = selectedAbility;
 
-        while (true) {
+        do {
             Map<Integer, List<Integer>> abilityVariations = romHandler.getAbilityVariations();
             for (int baseAbility: abilityVariations.keySet()) {
                 if (selectedAbility == baseAbility) {
@@ -124,25 +131,12 @@ public class SpeciesAbilityRandomizer extends Randomizer {
                     break;
                 }
             }
-
-            boolean repeat = false;
-            for (int alreadySetAbility : alreadySetAbilities) {
-                if (alreadySetAbility == newAbility) {
-                    repeat = true;
-                    break;
-                }
-            }
-
-            if (!repeat) {
-                break;
-            }
-        }
+        } while (bannedAbilities.contains(newAbility));
 
         return newAbility;
     }
 
-    private int pickRandomAbility(int maxAbility, List<Integer> bannedAbilities, boolean useVariations,
-                                  int... alreadySetAbilities) {
+    private int pickRandomAbility(int maxAbility, Set<Integer> bannedAbilities, boolean useVariations) {
         int newAbility;
 
         while (true) {
@@ -152,22 +146,58 @@ public class SpeciesAbilityRandomizer extends Randomizer {
                 continue;
             }
 
-            boolean repeat = false;
-            for (int alreadySetAbility : alreadySetAbilities) {
-                if (alreadySetAbility == newAbility) {
-                    repeat = true;
-                    break;
-                }
+            if (useVariations) {
+                newAbility = pickRandomAbilityVariation(newAbility, bannedAbilities);
             }
-
-            if (!repeat) {
-                if (useVariations) {
-                    newAbility = pickRandomAbilityVariation(newAbility, alreadySetAbilities);
-                }
-                break;
-            }
+            break;
         }
 
         return newAbility;
+    }
+
+    private Set<Integer> getSpeciesSpecificNegativeAbilities(Species species) {
+        HashSet<Integer> abilities = new HashSet<>();
+
+        if (!isHarmedByHarshSunlight(species)) {
+            abilities.add(AbilityIDs.desolateLand);
+            abilities.add(AbilityIDs.drought);
+        }
+
+        if (!isHarmedByRain(species)) {
+            abilities.add(AbilityIDs.drizzle);
+            abilities.add(AbilityIDs.primordialSea);
+        }
+
+        if (!isImmuneToSandstorm(species)) {
+            abilities.add(AbilityIDs.sandSpit);
+            abilities.add(AbilityIDs.sandStream);
+        }
+
+        if (!isImmuneToHail(species)) {
+            abilities.add(AbilityIDs.snowWarning);
+        }
+
+        return abilities;
+    }
+
+    private boolean isHarmedByHarshSunlight(Species species) {
+        return species.hasType(Type.WATER, false) // Decreased damage
+                || species.hasType(Type.ICE, false) // Prevents freezing
+                || species.hasType(Type.ELECTRIC, false) // Lowered Thunder accuracy
+                || species.hasType(Type.FLYING, false); // Lowered Hurricane accuracy
+    }
+
+    private boolean isHarmedByRain(Species species) {
+        return species.hasType(Type.FIRE, false); // Decreased damage
+    }
+
+    private boolean isImmuneToSandstorm(Species species) {
+        return species.hasType(Type.ROCK, false)
+                || species.hasType(Type.STEEL, false)
+                || species.hasType(Type.GROUND, false);
+    }
+
+    private boolean isImmuneToHail(Species species) {
+        return species.hasType(Type.ICE, false);
     }
 }
