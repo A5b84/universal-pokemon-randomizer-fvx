@@ -1,6 +1,6 @@
 package com.uprfvx.random.randomizers;
 
-import com.uprfvx.random.SetUnion;
+import com.uprfvx.random.util.SetUnion;
 import com.uprfvx.random.Settings;
 import com.uprfvx.romio.constants.AbilityIDs;
 import com.uprfvx.romio.constants.Gen3Constants;

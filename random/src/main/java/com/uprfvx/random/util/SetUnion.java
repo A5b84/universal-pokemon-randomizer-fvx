@@ -1,4 +1,4 @@
-package com.uprfvx.random;
+package com.uprfvx.random.util;
 
 import java.util.AbstractSet;
 import java.util.Iterator;

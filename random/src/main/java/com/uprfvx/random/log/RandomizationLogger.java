@@ -7,6 +7,7 @@ import com.uprfvx.random.gui.MiscTweakStrings;
 import com.uprfvx.random.random.RandomSource;
 import com.uprfvx.random.randomizers.*;
 import com.uprfvx.random.updaters.*;
+import com.uprfvx.random.util.GitUtil;
 import com.uprfvx.romio.MiscTweak;
 import com.uprfvx.romio.constants.Gen3Constants;
 import com.uprfvx.romio.constants.Gen5Constants;
@@ -160,7 +161,7 @@ public class RandomizationLogger {
             gameName = gameName + " (" + romHandler.getGameUpdateVersion() + ")";
         }
         log.printf(getBS("Log.baseGame"), gameName);
-        log.printf(getBS("Log.version"), Version.LATEST.branchName, Version.LATEST.name);
+        log.printf(getBS("Log.version"), Version.LATEST.branchName, Version.LATEST.name, getCommitInformation());
         log.printf(getBS("Log.seed"), randomSource.getSeed());
         log.printf(getBS("Log.settings"), settings.toString());
         log.println();
@@ -169,6 +170,21 @@ public class RandomizationLogger {
         log.printf(getBS("Log.wikiLink"), SysConstants.WIKI_URL);
         log.printf(getBS("Log.githubIssuesLink"), SysConstants.ISSUES_URL);
         printSectionSeparator();
+    }
+
+    private String getCommitInformation() {
+        Optional<String> hash = GitUtil.getCurrentCommitHash();
+        if (hash.isPresent()) {
+            String commitInformation = hash.get().substring(0, 7);
+
+            if (GitUtil.hasUncommittedChanges()) {
+                commitInformation += '*';
+            }
+
+            return commitInformation;
+        } else {
+            return getBS("Log.commitInformationUnavailable");
+        }
     }
 
     private void logTableOfContents() {
