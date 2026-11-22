@@ -1,6 +1,7 @@
 package com.uprfvx.random.randomizers;
 
 import com.uprfvx.random.Settings;
+import com.uprfvx.random.exceptions.RandomizationException;
 import com.uprfvx.romio.constants.ItemIDs;
 import com.uprfvx.romio.gamedata.Item;
 import com.uprfvx.romio.gamedata.Species;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
  */
 public class EncounterHeldItemRandomizer extends Randomizer {
 
-    private static final int GUARANTEED_ITEMS_MAX_ATTEMPTS = 1000;
+    private static final int RENEWABLE_ITEMS_MAX_ATTEMPTS = 1000;
 
     /**
      * Items that should always be available as held items in at least one encounter.
@@ -29,7 +30,7 @@ public class EncounterHeldItemRandomizer extends Randomizer {
     // - items that are reasonnable to want more than one of
     // - items that are not available at all in certain game versions
     // - items that can make gameplay more interesting
-    private static final Set<Integer> GUARANTEED_ITEMS = Set.of(
+    private static final Set<Integer> RENEWABLE_ITEMS = Set.of(
             // Consumable items
             ItemIDs.cherishBall,
             ItemIDs.dreamBall,
@@ -238,7 +239,7 @@ public class EncounterHeldItemRandomizer extends Randomizer {
             } 
         }
 
-        addGuaranteedItems();
+        addRenewableItems();
 
         changesMade = true;
     }
@@ -278,10 +279,10 @@ public class EncounterHeldItemRandomizer extends Randomizer {
         }
     }
 
-    private void addGuaranteedItems() {
+    private void addRenewableItems() {
         Set<Item> items = romHandler.getAllowedItems()
                 .stream()
-                .filter(item -> GUARANTEED_ITEMS.contains(item.getId()))
+                .filter(item -> RENEWABLE_ITEMS.contains(item.getId()))
                 .collect(Collectors.toSet());
 
         List<Species> allSpecies = romHandler.getSpecies();
@@ -294,7 +295,7 @@ public class EncounterHeldItemRandomizer extends Randomizer {
         }
 
         for (Item item : items) {
-            addGuaranteedItemToAnySpecies(item, allSpecies);
+            addRenewableItemToAnySpecies(item, allSpecies);
         }
     }
 
@@ -304,20 +305,24 @@ public class EncounterHeldItemRandomizer extends Randomizer {
         }
     }
 
-    private void addGuaranteedItemToAnySpecies(Item item, List<Species> allSpecies) {
-        for (int i = 0; i < GUARANTEED_ITEMS_MAX_ATTEMPTS; i++) {
+    private void addRenewableItemToAnySpecies(Item item, List<Species> allSpecies) {
+        for (int i = 0; i < RENEWABLE_ITEMS_MAX_ATTEMPTS; i++) {
             Species species = allSpecies.get(random.nextInt(allSpecies.size()));
 
-            if (species != null && tryAddGuaranteedItemToSpecies(item, species)) {
+            if (species != null && tryAddRenewableItemToSpecies(item, species)) {
                 return;
             }
         }
 
-        throw new RuntimeException("Could not find a species to which to add " + item + " within " + GUARANTEED_ITEMS_MAX_ATTEMPTS + " attempts");
+        throw new RandomizationException("Could not find a species to which to add " + item + " within " + RENEWABLE_ITEMS_MAX_ATTEMPTS + " attempts");
     }
 
-    private boolean tryAddGuaranteedItemToSpecies(Item item, Species species) {
-        if (random.nextBoolean()) {
+    private boolean tryAddRenewableItemToSpecies(Item item, Species species) {
+        if (species.getGuaranteedHeldItem() != null) {
+            return false;
+        }
+
+        if (random.nextFloat() < 0.6f) {
             if (species.getCommonHeldItem() == null) {
                 species.setCommonHeldItem(item);
                 return true;
