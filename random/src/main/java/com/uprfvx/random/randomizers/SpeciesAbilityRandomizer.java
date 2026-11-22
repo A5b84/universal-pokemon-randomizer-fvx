@@ -7,6 +7,7 @@ import com.uprfvx.romio.constants.Gen3Constants;
 import com.uprfvx.romio.constants.GlobalConstants;
 import com.uprfvx.romio.gamedata.Species;
 import com.uprfvx.romio.gamedata.Type;
+import com.uprfvx.romio.gamedata.TypeTable;
 import com.uprfvx.romio.gamedata.cueh.BasicSpeciesAction;
 import com.uprfvx.romio.gamedata.cueh.CopyUpEvolutionsHelper;
 import com.uprfvx.romio.gamedata.cueh.EvolvedSpeciesAction;
@@ -156,14 +157,14 @@ public class SpeciesAbilityRandomizer extends Randomizer {
     }
 
     private Set<Integer> getSpeciesSpecificNegativeAbilities(Species species) {
-        HashSet<Integer> abilities = new HashSet<>();
+        Set<Integer> abilities = new HashSet<>();
 
-        if (!isHarmedByHarshSunlight(species)) {
+        if (isHarmedByHarshSunlight(species)) {
             abilities.add(AbilityIDs.desolateLand);
             abilities.add(AbilityIDs.drought);
         }
 
-        if (!isHarmedByRain(species)) {
+        if (isHarmedByRain(species)) {
             abilities.add(AbilityIDs.drizzle);
             abilities.add(AbilityIDs.primordialSea);
         }
@@ -184,11 +185,24 @@ public class SpeciesAbilityRandomizer extends Randomizer {
         return species.hasType(Type.WATER, false) // Decreased damage
                 || species.hasType(Type.ICE, false) // Prevents freezing
                 || species.hasType(Type.ELECTRIC, false) // Lowered Thunder accuracy
-                || species.hasType(Type.FLYING, false); // Lowered Hurricane accuracy
+                || species.hasType(Type.FLYING, false) // Lowered Hurricane accuracy
+                || isWeakToType(species, Type.FIRE);
     }
 
     private boolean isHarmedByRain(Species species) {
-        return species.hasType(Type.FIRE, false); // Decreased damage
+        return species.hasType(Type.FIRE, false) // Decreased damage
+                || isWeakToType(species, Type.WATER);
+    }
+
+    private boolean isWeakToType(Species species, Type type) {
+        TypeTable typeTable = romHandler.getTypeTable();
+        float multiplier = typeTable.getEffectiveness(type, species.getPrimaryType(false)).multiplier;
+
+        if (species.hasSecondaryType(false)) {
+            multiplier *= typeTable.getEffectiveness(type, species.getSecondaryType(false)).multiplier;
+        }
+
+        return multiplier > 1;
     }
 
     private boolean isImmuneToSandstorm(Species species) {

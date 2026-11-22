@@ -31,7 +31,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public enum Effectiveness {
-    ZERO, HALF, NEUTRAL, DOUBLE, QUARTER, QUADRUPLE;
+    ZERO(0),
+    HALF(0.5f),
+    NEUTRAL(1),
+    DOUBLE(2),
+    QUARTER(0.25f),
+    QUADRUPLE(4);
+
+    public final float multiplier;
+
+    Effectiveness(float multiplier) {
+        this.multiplier = multiplier;
+    }
 
     @Deprecated
     public static Map<Type, Effectiveness> against(Type primaryType, Type secondaryType, int gen) {
