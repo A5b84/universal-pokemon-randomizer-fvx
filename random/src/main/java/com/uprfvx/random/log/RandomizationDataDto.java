@@ -92,7 +92,7 @@ public record RandomizationDataDto(
 
     public record SpeciesIdDto(String name, int number) {
         public static SpeciesIdDto from(Species species) {
-            return new SpeciesIdDto(species.getName(), species.getNumber());
+            return new SpeciesIdDto(species.getFullName(), species.getNumber());
         }
     }
 
