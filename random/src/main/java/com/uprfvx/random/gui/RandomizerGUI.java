@@ -755,7 +755,16 @@ public class RandomizerGUI {
 
         try {
             javax.swing.UIManager.setLookAndFeel(theme.getLaf());
-            SwingUtilities.updateComponentTreeUI(mainPanel);
+            // All new components will use the UIManager's Laf automatically,
+            // but the ones that are already present (i.e. GUI class attributes),
+            // and are at the root of their component trees,
+            // need to be manually updated.
+            List<JComponent> alreadyPresentRootComponents = List.of(
+                    mainPanel, settingsMenu, romOpenChooser, romSaveChooser,
+                    qsOpenChooser, qsSaveChooser, qsUpdateChooser, gameUpdateChooser
+            );
+            alreadyPresentRootComponents.forEach(SwingUtilities::updateComponentTreeUI);
+
         } catch (UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(RandomizerGUI.class.getName()).log(java.util.logging.Level.SEVERE, null,
                     ex);
@@ -4193,6 +4202,15 @@ public class RandomizerGUI {
             launcherInput = firstCliArg;
             if (launcherInput.equals("please-use-the-launcher")) usedLauncher = true;
             SwingUtilities.invokeLater(() -> {
+                try {
+                    UIManager.setLookAndFeel(Theme.DEFAULT.getLaf());
+                } catch (UnsupportedLookAndFeelException e) {
+                    System.err.println("Could not find/use the default Look-and-Feel. " +
+                            "The GUI might look weird as a consequence. " +
+                            "Please report this bug if you see it.");
+                    System.err.println(Arrays.toString(e.getStackTrace()));
+                }
+
                 frame = new JFrame("RandomizerGUI");
                 frame.setContentPane(new RandomizerGUI().mainPanel);
                 frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
